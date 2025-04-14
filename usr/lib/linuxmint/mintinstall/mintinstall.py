@@ -2171,6 +2171,10 @@ class Application(Gtk.Application):
         for child in self.subcat_flowbox.get_children():
             child.destroy()
 
+        if len(category.subcategories) == 0:
+            self.subcat_flowbox.hide()
+            return
+
         child = SubcategoryFlowboxChild(category, is_all=True, active=self.current_category == category)
         self.subcat_flowbox.add(child)
 
