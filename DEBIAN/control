@@ -10,3 +10,4 @@ Section: admin
 Priority: optional
 Description: Software Manager
  A software manager to easily install new applications.
+Replaces: solstice, feren-storium

@@ -31,157 +31,86 @@ class ChangesConfirmDialog(AptConfirmDialog):
             self.set_skip_taskbar_hint(True)
             self.set_keep_above(True)
 
-        # Run parent method for apt
-        if not self.task or (self.task.pkginfo and self.task.pkginfo.pkg_hash.startswith("a")):
-            """Show a message and the dependencies in the dialog."""
-            self.treestore.clear()
-            for pkg_list, msg, min_packages in (
-                                  [self.task.to_install,      _("Install"), 1 if self.task.type == self.task.INSTALL_TASK else 0],
-                                  [self.task.to_reinstall,    _("Reinstall"), 0],
-                                  [self.task.to_remove,       _("Remove"), 1 if self.task.type == self.task.UNINSTALL_TASK else 0],
-                                  [self.task.to_purge,        _("Purge"), 0],
-                                  [self.task.to_update,       _("Upgrade"), 0],
-                                  [self.task.to_downgrade,    _("Downgrade"), 0],
-                                  [self.task.to_skip_upgrade, _("Skip upgrade"), 0]
-                                 ):
+        # Run parent method for flatpak
+        self.set_title(_("Flatpaks"))
 
-                if len(pkg_list) > min_packages:
-                    piter = self.treestore.append(None, ["<b>%s</b>" % msg])
+        min_packages = 1 if self.task.type == self.task.INSTALL_TASK else 0
+        if len(self.task.to_install) > min_packages:
+            piter = self.treestore.append(None, ["<b>%s</b>" % _("Install")])
 
-                    for pkg in pkg_list:
-                        if pkg_list == self.task.to_install and pkg.get_name() == self.task.name:
-                            continue
+            for ref in self.task.to_install:
+                if self.task.pkginfo and self.task.pkginfo.refid == ref.format_ref():
+                    continue
 
-                        self.treestore.append(piter, [pkg.get_name()])
-            # If there is only one type of changes (e.g. only installs) expand the
-            # tree
-            # FIXME: adapt the title and message accordingly
-            # FIXME: Should we have different modes? Only show dependencies, only
-            #       initial packages or both?
-            msg = _("Please take a look at the list of changes below.")
-            if len(self.treestore) == 1:
-                filtered_store = self.treestore.filter_new(Gtk.TreePath.new_first())
-                self.treeview.expand_all()
-                self.treeview.set_model(filtered_store)
-                self.treeview.set_show_expanders(False)
-                if len(self.task.to_install) > 1:
-                    title = _("Additional software will be installed")
-                elif len(self.task.to_reinstall) > 0:
-                    title = _("Additional software will be re-installed")
-                elif len(self.task.to_remove) > 0:
-                    title = _("Additional software will be removed")
-                elif len(self.task.to_purge) > 0:
-                    title = _("Additional software will be purged")
-                elif len(self.task.to_update) > 0:
-                    title = _("Additional software will be upgraded")
-                elif len(self.task.to_downgrade) > 0:
-                    title = _("Additional software will be downgraded")
-                elif len(self.task.to_skip_upgrade) > 0:
-                    title = _("Updates will be skipped")
-                if len(filtered_store) < 6:
-                    self.set_resizable(False)
-                    self.scrolled.set_policy(Gtk.PolicyType.AUTOMATIC,
-                                             Gtk.PolicyType.NEVER)
-                else:
-                    self.treeview.set_size_request(350, 200)
+                self.treestore.append(piter, [ref.get_name()])
+
+        min_packages = 1 if self.task.type == self.task.UNINSTALL_TASK else 0
+        if len(self.task.to_remove) > min_packages:
+            piter = self.treestore.append(None, ["<b>%s</b>" % _("Remove")])
+
+            for ref in self.task.to_remove:
+                if self.task.pkginfo and self.task.pkginfo.refid == ref.format_ref():
+                    continue
+
+                self.treestore.append(piter, [ref.get_name()])
+
+        if len(self.task.to_update) > 0:
+            # If this is an update task (like from mintupdate) we may have selected updates explicitly, and there may be
+            # updates we *didn't* select but are required for an update we did. We only want to add those updates that
+            # are pulled in the second case, since the updates we did select do not need to be displayed again (this is
+            # following apt behavior, where we only list dependencies here and unexpected changes).
+            header_added = False
+            for ref in self.task.to_update:
+                if self.task.type == self.task.UPDATE_TASK:
+                    if len(self.task.initial_refs_to_update) == 0 or ref.format_ref() in self.task.initial_refs_to_update:
+                        continue
+
+                if not header_added:
+                    piter = self.treestore.append(None, ["<b>%s</b>" % _("Upgrade")])
+                    header_added = True
+
+                self.treestore.append(piter, [ref.get_name()])
+
+        msg = _("Please take a look at the list of changes below.")
+
+        if len(self.treestore) == 1:
+            filtered_store = self.treestore.filter_new(
+                Gtk.TreePath.new_first())
+            self.treeview.expand_all()
+            self.treeview.set_model(filtered_store)
+            self.treeview.set_show_expanders(False)
+
+            if len(self.task.to_install) > 1:
+                title = _("Additional software will be installed")
+            elif len(self.task.to_remove) > 0:
+                title = _("Additional software will be removed")
+            elif len(self.task.to_update) > 0:
+                title = _("Additional software will be upgraded")
+
+            if len(filtered_store) < 6:
+                self.set_resizable(False)
+                self.scrolled.set_policy(Gtk.PolicyType.AUTOMATIC,
+                                            Gtk.PolicyType.NEVER)
             else:
-                title = _("Additional changes are required")
                 self.treeview.set_size_request(350, 200)
-                self.treeview.collapse_all()
-            if self.task.download_size > 0:
-                msg += "\n"
-                msg += (_("%s will be downloaded in total.") %
-                        GLib.format_size(self.task.download_size))
-            if self.task.freed_size > 0:
-                msg += "\n"
-                msg += (_("%s of disk space will be freed.") %
-                        GLib.format_size(self.task.freed_size))
-            elif self.task.install_size > 0:
-                msg += "\n"
-                msg += (_("%s more disk space will be used.") %
-                        GLib.format_size(self.task.install_size))
-            self.label.set_markup("<b><big>%s</big></b>\n\n%s" % (title, msg))
         else:
-            # flatpak
-            self.set_title(_("Flatpaks"))
+            title = _("Additional changes are required")
+            self.treeview.set_size_request(350, 200)
+            self.treeview.collapse_all()
 
-            min_packages = 1 if self.task.type == self.task.INSTALL_TASK else 0
-            if len(self.task.to_install) > min_packages:
-                piter = self.treestore.append(None, ["<b>%s</b>" % _("Install")])
-
-                for ref in self.task.to_install:
-                    if self.task.pkginfo and self.task.pkginfo.refid == ref.format_ref():
-                        continue
-
-                    self.treestore.append(piter, [ref.get_name()])
-
-            min_packages = 1 if self.task.type == self.task.UNINSTALL_TASK else 0
-            if len(self.task.to_remove) > min_packages:
-                piter = self.treestore.append(None, ["<b>%s</b>" % _("Remove")])
-
-                for ref in self.task.to_remove:
-                    if self.task.pkginfo and self.task.pkginfo.refid == ref.format_ref():
-                        continue
-
-                    self.treestore.append(piter, [ref.get_name()])
-
-            if len(self.task.to_update) > 0:
-                # If this is an update task (like from mintupdate) we may have selected updates explicitly, and there may be
-                # updates we *didn't* select but are required for an update we did. We only want to add those updates that
-                # are pulled in the second case, since the updates we did select do not need to be displayed again (this is
-                # following apt behavior, where we only list dependencies here and unexpected changes).
-                header_added = False
-                for ref in self.task.to_update:
-                    if self.task.type == self.task.UPDATE_TASK:
-                        if len(self.task.initial_refs_to_update) == 0 or ref.format_ref() in self.task.initial_refs_to_update:
-                            continue
-
-                    if not header_added:
-                        piter = self.treestore.append(None, ["<b>%s</b>" % _("Upgrade")])
-                        header_added = True
-
-                    self.treestore.append(piter, [ref.get_name()])
-
-            msg = _("Please take a look at the list of changes below.")
-
-            if len(self.treestore) == 1:
-                filtered_store = self.treestore.filter_new(
-                    Gtk.TreePath.new_first())
-                self.treeview.expand_all()
-                self.treeview.set_model(filtered_store)
-                self.treeview.set_show_expanders(False)
-
-                if len(self.task.to_install) > 1:
-                    title = _("Additional software will be installed")
-                elif len(self.task.to_remove) > 0:
-                    title = _("Additional software will be removed")
-                elif len(self.task.to_update) > 0:
-                    title = _("Additional software will be upgraded")
-
-                if len(filtered_store) < 6:
-                    self.set_resizable(False)
-                    self.scrolled.set_policy(Gtk.PolicyType.AUTOMATIC,
-                                             Gtk.PolicyType.NEVER)
-                else:
-                    self.treeview.set_size_request(350, 200)
-            else:
-                title = _("Additional changes are required")
-                self.treeview.set_size_request(350, 200)
-                self.treeview.collapse_all()
-
-            if self.task.download_size > 0:
-                msg += "\n"
-                msg += (_("%s will be downloaded in total.") %
-                        GLib.format_size(self.task.download_size))
-            if self.task.freed_size > 0:
-                msg += "\n"
-                msg += (_("%s of disk space will be freed.") %
-                        GLib.format_size(self.task.freed_size))
-            elif self.task.install_size > 0:
-                msg += "\n"
-                msg += (_("%s more disk space will be used.") %
-                        GLib.format_size(self.task.install_size))
-            self.label.set_markup("<b><big>%s</big></b>\n\n%s" % (title, msg))
+        if self.task.download_size > 0:
+            msg += "\n"
+            msg += (_("%s will be downloaded in total.") %
+                    GLib.format_size(self.task.download_size))
+        if self.task.freed_size > 0:
+            msg += "\n"
+            msg += (_("%s of disk space will be freed.") %
+                    GLib.format_size(self.task.freed_size))
+        elif self.task.install_size > 0:
+            msg += "\n"
+            msg += (_("%s more disk space will be used.") %
+                    GLib.format_size(self.task.install_size))
+        self.label.set_markup("<b><big>%s</big></b>\n\n%s" % (title, msg))
 
     def map_package(self, pkg):
         """Map a package to a different object type, e.g. applications

@@ -90,8 +90,7 @@ class InstallerTask:
         self.client_finished_cb = client_installer_finished_cb
 
         # These are internally used - called as the 'real' error and finished callback,
-        # to do some cleanup like removing the task and reloading the apt cache before
-        # finally calling task.client_finished_cb
+        # to do some cleanup like removing the task and calling task.client_finished_cb
         self.error_cleanup_cb = installer_error_cleanup_cb
         self.finished_cleanup_cb = installer_cleanup_cb
 
@@ -426,7 +425,7 @@ class Installer(GObject.Object):
     def find_pkginfo(self, name, pkg_type=PKG_TYPE_ALL, remote=None):
         """
         Attempts to find and return a PkgInfo object, given a package name.  If
-        pkg_type is None, looks in first apt, then flatpaks.
+        pkg_type is None, looks in flatpaks.
         """
         return self.cache.find_pkginfo(name, pkg_type, remote)
 
@@ -473,7 +472,7 @@ class Installer(GObject.Object):
     def pkginfo_is_installed(self, pkginfo):
         """
         Returns whether or not a given package is currently installed.  This uses
-        the AptCache or the FlatpakInstallation to check.
+        the FlatpakInstallation to check.
         """
         if self.inited:
             if self.have_flatpak and pkginfo.pkg_hash.startswith("f"):
@@ -548,8 +547,7 @@ class Installer(GObject.Object):
 
     def get_description(self, pkginfo, for_search=False):
         """
-        Returns the description of the package.  If for_search is True,
-        this is the raw, unformatted string in the case of apt.
+        Returns the description of the package.
         """
 
         as_pkg = self.get_appstream_pkg_for_pkginfo(pkginfo)
@@ -583,13 +581,9 @@ class Installer(GObject.Object):
         """
         Returns the currently deployed version of a flatpak.
         """
-        if pkginfo.pkg_hash.startswith("a"):
-            # apt packages we don't really need to make a distinction.
-            return self.get_version(pkginfo)
-        else:
-            # flatpak packages, the appstream as_pkg shows the latest version provided in the xml,
-            # not the actual installed version.
-            return _flatpak._get_deployed_version(pkginfo)
+        # flatpak packages, the appstream as_pkg shows the latest version provided in the xml,
+        # not the actual installed version.
+        return _flatpak._get_deployed_version(pkginfo)
 
     def get_homepage_url(self, pkginfo):
         """
@@ -604,8 +598,7 @@ class Installer(GObject.Object):
     def get_help_url(self, pkginfo):
         """
         Returns the help url for a package.  If there is
-        no url for the package, returns an empty string. Apt always returns
-        an empty string.
+        no url for the package, returns an empty string.
         """
         as_pkg = self.get_appstream_pkg_for_pkginfo(pkginfo)
 

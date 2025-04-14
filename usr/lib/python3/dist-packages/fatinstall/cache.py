@@ -8,7 +8,7 @@ from gi.repository import GLib, GObject
 
 from . import _flatpak
 from ._flatpak import FlatpakRemoteInfo
-from .pkgInfo import FlatpakPkgInfo, AptPkgInfo
+from .pkgInfo import FlatpakPkgInfo
 from .misc import print_timing, debug, warn
 from typing import Optional
 
@@ -42,10 +42,7 @@ class JsonObject(object):
         for key in json_data["pkginfo_cache"].keys():
             pkginfo_data = json_data["pkginfo_cache"][key]
 
-            if pkginfo_data["pkg_hash"].startswith("a"):
-                pkgcache_dict[key] = AptPkgInfo.from_json(pkginfo_data)
-            else:
-                pkgcache_dict[key] = FlatpakPkgInfo.from_json(pkginfo_data)
+            pkgcache_dict[key] = FlatpakPkgInfo.from_json(pkginfo_data)
 
         remotes_dict = {}
         for key in json_data["flatpak_remote_infos"].keys():
@@ -233,7 +230,6 @@ class PkgCache(object):
         path = self._get_best_save_path()
 
         FlatpakPkgInfo.__module__ = "installer.pkgInfo"
-        AptPkgInfo.__module__ = "installer.pkgInfo"
         FlatpakRemoteInfo.__module__ = "installer._flatpak"
 
         try:
@@ -245,19 +241,6 @@ class PkgCache(object):
     def _new_cache_common(self):
         debug("Installer: Generating new pkgcache")
         cache, sections, flatpak_remote_infos = self._generate_cache()
-
-        # If we're refreshing only a specific package type, don't destroy existing
-        # items of the other type (otherwise if the cache is refreshed by mintupdate's
-        # flatpak updater mintinstall will end up starting without any apt package info
-        # and look broken).
-        with self._item_lock:
-            if self.cache_content == "f":
-                for key in [key for key in self._items.keys() if key.startswith("a")]:
-                    cache[key] = self._items[key]
-                sections = self.sections
-            elif self.cache_content == "a":
-                for key in [key for key in self._items.keys() if key.startswith("f")]:
-                    cache[key] = self._items[key]
 
         if len(cache) > 0:
             self._save_cache(JsonObject(cache, sections, flatpak_remote_infos))
@@ -291,22 +274,15 @@ class PkgCache(object):
         self._new_cache_common()
 
     def find_pkginfo(self, string, pkg_type=None, remote=None):
-        if pkg_type == "a" and not string.startswith("apt:"):
-            string = "apt:" + string
-        try:
-            return self[string]
-        except KeyError:
-            if string[0:4] == "apt:":
-                return None
-            if self.have_flatpak:
-                pkginfo = _flatpak.find_pkginfo(self, string, remote)
-                if pkginfo is not None:
-                    return pkginfo
+        if self.have_flatpak:
+            pkginfo = _flatpak.find_pkginfo(self, string, remote)
+            if pkginfo is not None:
+                return pkginfo
 
         return None
 
     def get_manually_installed_packages(self):
-        """ Get list of all manually installed packages (apt and flatpak) """
+        """ Get list of all manually installed packages (flatpak) """
         installed_packages = [x for x in self.get_subset_of_type("f")]
         return installed_packages
 

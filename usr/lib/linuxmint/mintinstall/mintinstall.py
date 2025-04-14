@@ -1225,7 +1225,7 @@ class Application(Gtk.Application):
             child.destroy()
 
         apps = []
-        for info in (self.all_category.pkginfos + self.flatpak_category.pkginfos):
+        for info in (self.flatpak_category.pkginfos):
             if info.refid == "" or info.refid.startswith("app"):
                 if not info.verified:
                     continue
@@ -1337,10 +1337,6 @@ class Application(Gtk.Application):
             button = CategoryButton(self.flatpak_category)
             button.connect("clicked", self.category_button_clicked, self.flatpak_category)
             flowbox.insert(button, -1)
-
-        button = CategoryButton(self.all_category)
-        button.connect("clicked", self.category_button_clicked, self.all_category)
-        flowbox.insert(button, -1)
 
         box.pack_start(flowbox, True, True, 0)
         box.show_all()
@@ -1997,10 +1993,7 @@ class Application(Gtk.Application):
         self.root_categories[category.name] = category
 
         # ALL
-        self.all_category = Category(_("All Applications"), None, self.categories, "mintinstall-all-symbolic")
-        for cat in self.categories:
-            self.all_category.matchingPackages.extend(cat.matchingPackages)
-        sorted(self.all_category.matchingPackages)
+        self.flatpak_category = Category(_("All Applications"), None, self.categories, "mintinstall-all-symbolic")
 
     def add_pkginfo_to_category(self, pkginfo, category):
             try:
@@ -2199,10 +2192,6 @@ class Application(Gtk.Application):
         # Load subcategories
         for child in self.subcat_flowbox.get_children():
             child.destroy()
-
-        if category == self.flatpak_category or len(category.subcategories) == 0:
-            self.subcat_flowbox.hide()
-            return
 
         child = SubcategoryFlowboxChild(category, is_all=True, active=self.current_category == category)
         self.subcat_flowbox.add(child)
