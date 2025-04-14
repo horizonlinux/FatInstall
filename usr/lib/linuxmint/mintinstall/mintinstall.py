@@ -26,8 +26,8 @@ gi.require_version('XApp', '1.0')
 from gi.repository import Gtk, Gdk, GdkPixbuf, GObject, GLib, Gio, XApp, Pango
 import cairo
 
-from mintcommon.installer import installer
-from mintcommon.installer import dialogs
+from fatinstall import installer
+from fatinstall import dialogs
 import prefs
 import reviews
 import housekeeping
@@ -73,36 +73,7 @@ setproctitle.setproctitle("mintinstall")
 
 Gtk.IconTheme.get_default().append_search_path("/usr/share/linuxmint/mintinstall")
 
-# List of aliases
-ALIASES = {}
-ALIASES['spotify-client'] = "Spotify"
-ALIASES['steam-installer'] = "Steam"
-ALIASES['minecraft-launcher'] = "Minecraft"
-ALIASES['virtualbox-qt'] = "Virtualbox " # Added a space to force alias
-ALIASES['virtualbox'] = "Virtualbox (base)"
-ALIASES['sublime-text'] = "Sublime"
-ALIASES['mint-meta-codecs'] = _("Multimedia Codecs")
-ALIASES['mint-meta-codecs-kde'] = _("Multimedia Codecs for KDE")
-ALIASES['mint-meta-debian-codecs'] = _("Multimedia Codecs")
-ALIASES['firefox'] = "Firefox"
-ALIASES['vlc'] = "VLC"
-ALIASES['mpv'] = "Mpv"
-ALIASES['gimp'] = "Gimp"
-ALIASES['gnome-maps'] = "GNOME Maps"
-ALIASES['thunderbird'] = "Thunderbird"
-ALIASES['pia-manager'] = "PIA Manager"
-ALIASES['skypeforlinux'] = "Skype"
-ALIASES['google-earth-pro-stable'] = "Google Earth"
-ALIASES['whatsapp-desktop'] = "WhatsApp"
-ALIASES['wine-installer'] = "Wine"
-
 libdir = os.path.join("/usr/lib/linuxmint/mintinstall")
-
-with open(os.path.join(libdir, "apt_flatpak_match_data.info")) as f:
-    match_data = json.load(f)
-
-FLATPAK_EQUIVS = match_data["apt_flatpak_matches"]
-DEB_EQUIVS = dict((v, k) for k,v in FLATPAK_EQUIVS.items())
 
 pkg_tile_ui = "/usr/share/linuxmint/mintinstall/mintinstall.gresource"
 UI_RESOURCES = Gio.Resource.load(pkg_tile_ui)
@@ -882,11 +853,6 @@ class Application(Gtk.Application):
         self.refresh_cache_menuitem.set_sensitive(False)
         submenu.append(self.refresh_cache_menuitem)
 
-        software_sources_menuitem = Gtk.MenuItem(label=_("Software sources"))
-        software_sources_menuitem.connect("activate", self.open_software_sources)
-        software_sources_menuitem.show()
-        submenu.append(software_sources_menuitem)
-
         self.prefs_menuitem = Gtk.MenuItem(label=_("Preferences"))
         self.prefs_menuitem.connect("activate", self.on_prefs_clicked)
         self.prefs_menuitem.show()
@@ -1057,8 +1023,6 @@ class Application(Gtk.Application):
         try:
             self.process_matching_packages()
 
-            self.apply_aliases()
-
             self.review_cache = reviews.ReviewCache()
             self.review_cache.connect("reviews-updated", self.load_landing_apps)
             self.load_landing_apps()
@@ -1139,8 +1103,7 @@ class Application(Gtk.Application):
 
                 is_flatpak = True
             else:
-                pkginfo = self.installer.find_pkginfo(name, installer.PKG_TYPE_APT)
-                is_flatpak = False
+                continue
 
             if pkginfo is None:
                 continue
@@ -1318,7 +1281,7 @@ class Application(Gtk.Application):
                 if pkginfo is None or not pkginfo.verified:
                     continue
             else:
-                pkginfo = self.installer.find_pkginfo(name, installer.PKG_TYPE_APT)
+                continue
             if pkginfo is None:
                 continue
             if pkginfo.name == self.banner_app_name:
@@ -1387,15 +1350,6 @@ class Application(Gtk.Application):
         self.load_banner()
         self.load_featured()
         self.load_top_rated()
-
-    def open_software_sources(self,_):
-        # Opens Mint's Software Sources and refreshes the cache afterwards
-        def on_process_exited(proc, result):
-            proc.wait_finish(result)
-            self.refresh_cache()
-        p = Gio.Subprocess.new(["mintsources"], 0)
-        # Add a callback when we exit mintsources
-        p.wait_async(None, on_process_exited)
 
     def should_show_pkginfo(self, pkginfo):
         if pkginfo.pkg_hash.startswith("apt"):
@@ -1765,14 +1719,6 @@ class Application(Gtk.Application):
         if (self.searchentry.get_text() != ""):
             self.show_search_results(terms)
 
-    def set_package_type_preference(self, radiomenuitem, value):
-        if radiomenuitem.get_active():
-            self.settings.set_string(prefs.PACKAGE_TYPE_PREFERENCE, value)
-
-            terms = self.searchentry.get_text()
-            if terms != "":
-                self.show_search_results(terms)
-
     def open_about(self, widget):
         dlg = Gtk.AboutDialog()
         dlg.set_transient_for(self.main_window)
@@ -1814,7 +1760,7 @@ class Application(Gtk.Application):
 
         self.installer = installer.Installer()
 
-        from mintcommon.installer import cache
+        from fatinstall import cache
 
         self.installer.cache = cache.PkgCache(None, None, self.installer.have_flatpak)
         self.installer.cache._generate_cache_thread()
@@ -2086,22 +2032,11 @@ class Application(Gtk.Application):
         else:
             fp_hashes = []
 
-        apt_cache = installer._apt.get_apt_cache()
-        apt_hashes = [installer._apt.make_pkg_hash(pkg) for pkg in apt_cache if pkg.installed]
-
-        return apt_hashes + fp_hashes
+        return fp_hashes
 
     @print_timing
     def process_matching_packages(self):
         # Process matching packages
-        for category in self.categories:
-            for package_name in category.matchingPackages:
-                if package_name.startswith("fp"):
-                    continue
-                pkginfo = self.installer.find_pkginfo(package_name, installer.PKG_TYPE_APT)
-
-                self.add_pkginfo_to_category(pkginfo, category)
-
         for package_name in self.installed_category.matchingPackages:
             if not package_name.startswith("fp"):
                 continue
@@ -2143,14 +2078,6 @@ class Application(Gtk.Application):
                 for pkg_hash in cache_sections[section]:
                     self.add_pkginfo_to_category(self.installer.cache[pkg_hash],
                                                  self.sections[section])
-
-    def apply_aliases(self):
-        for pkg_name in ALIASES.keys():
-            pkginfo = self.installer.cache.find_pkginfo(pkg_name, installer.PKG_TYPE_APT) # aliases currently only apply to apt
-
-            if pkginfo:
-                # print("Applying aliases: ", ALIASES[pkg_name], self.installer.get_display_name(pkginfo))
-                pkginfo.display_name = ALIASES[pkg_name]
 
     def finish_loading_visual(self):
         if self.page_stack.get_visible_child_name() != self.PAGE_LANDING:
@@ -2344,7 +2271,6 @@ class Application(Gtk.Application):
         search_in_summary = self.settings.get_boolean(prefs.SEARCH_IN_SUMMARY)
         search_in_description = self.settings.get_boolean(prefs.SEARCH_IN_DESCRIPTION)
 
-        package_type_preference = self.settings.get_string(prefs.PACKAGE_TYPE_PREFERENCE)
         hidden_packages = set()
 
         def idle_search_one_package(pkginfos):
@@ -2391,10 +2317,6 @@ class Application(Gtk.Application):
 
             if is_match:
                 searched_packages.append(pkginfo)
-                if package_type_preference == prefs.PACKAGE_TYPE_PREFERENCE_APT and not flatpak:
-                    hidden_packages.add(FLATPAK_EQUIVS.get(pkginfo.name))
-                elif package_type_preference == prefs.PACKAGE_TYPE_PREFERENCE_FLATPAK and flatpak:
-                    hidden_packages.add(DEB_EQUIVS.get(pkginfo.name))
 
             # Repeat until empty
             if len(pkginfos) > 0:
@@ -2402,12 +2324,7 @@ class Application(Gtk.Application):
 
             self.search_idle_timer = 0
 
-            if package_type_preference == prefs.PACKAGE_TYPE_PREFERENCE_APT:
-                results = [p for p in searched_packages if not (p.pkg_hash.startswith("f") and p.name in hidden_packages)]
-            elif package_type_preference == prefs.PACKAGE_TYPE_PREFERENCE_FLATPAK:
-                results = [p for p in searched_packages if not (p.pkg_hash.startswith("a") and p.name in hidden_packages)]
-            else:
-                results = searched_packages
+            results = searched_packages
 
             GLib.idle_add(self.on_search_results_complete, results)
             return False
@@ -2627,14 +2544,6 @@ class Application(Gtk.Application):
         row = None
         tooltip = None
 
-        # add system if this is a system package, or one exists in our match table.
-        if not is_flatpak:
-            row_pkginfo = pkginfo
-        else:
-            match = self.get_deb_for_flatpak(pkginfo)
-            if match is not None:
-                row_pkginfo = match
-
         if row_pkginfo:
             row = [i, _("System Package"), _("Your system's package manager"), "linuxmint-logo-badge-symbolic", row_pkginfo]
             iter = self.package_type_store.append(row)
@@ -2643,8 +2552,8 @@ class Application(Gtk.Application):
                 tooltip = row[PACKAGE_TYPE_COMBO_SUMMARY]
             i += 1
 
-        if is_flatpak or self.get_flatpak_for_deb(pkginfo) is not None:
-            a_flatpak = self.get_flatpak_for_deb(pkginfo) or pkginfo
+        if is_flatpak:
+            a_flatpak = pkginfo
             for remote in self.installer.list_flatpak_remotes():
                 row_pkginfo = self.installer.find_pkginfo(a_flatpak.name, installer.PKG_TYPE_FLATPAK, remote=remote.name)
                 if row_pkginfo:
@@ -2847,22 +2756,6 @@ class Application(Gtk.Application):
 
     def on_package_type_button_clicked(self, button, pkginfo):
         self.show_package(pkginfo, self.previous_page)
-
-    def get_flatpak_for_deb(self, pkginfo):
-        try:
-            fp_name = FLATPAK_EQUIVS[pkginfo.name]
-            flatpak_pkginfo = self.installer.find_pkginfo(fp_name, installer.PKG_TYPE_FLATPAK)
-            if self.should_show_pkginfo(flatpak_pkginfo):
-                return flatpak_pkginfo
-        except:
-            return None
-
-    def get_deb_for_flatpak(self, pkginfo):
-        try:
-            deb_name = DEB_EQUIVS[pkginfo.name]
-            return self.installer.find_pkginfo(deb_name, installer.PKG_TYPE_APT)
-        except:
-            return None
 
     def on_installer_info_error(self, task):
         if networking_available():

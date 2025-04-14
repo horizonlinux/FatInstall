@@ -7,11 +7,10 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import GLib, GObject, Gio, Gtk
 
-from . import cache, _flatpak, _apt, dialogs
+from . import cache, _flatpak, dialogs
 from .misc import print_timing, check_ml, debug, warn
 
 PKG_TYPE_ALL = None
-PKG_TYPE_APT = "a"
 PKG_TYPE_FLATPAK = "f"
 
 Gtk.IconTheme.get_default().append_search_path("/usr/share/linuxmint/icons")
@@ -392,10 +391,7 @@ class Installer(GObject.Object):
         task.set_version(self)
         task.as_pkg = self.get_appstream_pkg_for_pkginfo(pkginfo)
 
-        if pkginfo.pkg_hash.startswith("a"):
-            _apt.select_packages(task)
-        else:
-            _flatpak.select_packages(task)
+        _flatpak.select_packages(task)
 
         return task.cancellable
 
@@ -480,9 +476,7 @@ class Installer(GObject.Object):
         the AptCache or the FlatpakInstallation to check.
         """
         if self.inited:
-            if pkginfo.pkg_hash.startswith("a"):
-                return _apt.pkginfo_is_installed(pkginfo)
-            elif self.have_flatpak and pkginfo.pkg_hash.startswith("f"):
+            if self.have_flatpak and pkginfo.pkg_hash.startswith("f"):
                 return _flatpak.pkginfo_is_installed(pkginfo)
 
         return False
@@ -506,22 +500,12 @@ class Installer(GObject.Object):
         if self.have_flatpak:
             _flatpak.initialize_appstream(cb=self.on_appstream_loaded)
 
-        # Open the apt cache while we're in a thread.
-        _apt.get_apt_cache()
-
     def on_appstream_loaded(self):
         self.generate_uncached_pkginfos()
         self.emit("appstream-changed")
 
     def get_appstream_pkg_for_pkginfo(self, pkginfo):
-        backend_component = None
-
-        if pkginfo.pkg_hash.startswith("a"):
-            backend_component = _apt.search_for_pkginfo_apt_pkg(pkginfo)
-            if backend_component is not None:
-                self.backend_table[pkginfo] = backend_component
-        else:
-            backend_component = _flatpak.search_for_pkginfo_appstream_package(pkginfo)
+        backend_component = _flatpak.search_for_pkginfo_appstream_package(pkginfo)
 
         return backend_component
 
@@ -567,11 +551,6 @@ class Installer(GObject.Object):
         Returns the description of the package.  If for_search is True,
         this is the raw, unformatted string in the case of apt.
         """
-        if for_search and pkginfo.pkg_hash.startswith("a"):
-            try:
-                return _apt._apt_cache[pkginfo.name].candidate.description
-            except Exception:
-                pass
 
         as_pkg = self.get_appstream_pkg_for_pkginfo(pkginfo)
         return pkginfo.get_description(as_pkg)
@@ -716,17 +695,6 @@ class Installer(GObject.Object):
         self._post_task_update(task)
 
     def _post_task_update(self, task):
-        if task.pkginfo and task.pkginfo.pkg_hash.startswith("a"):
-            thread = threading.Thread(target=self._apt_post_task_update_thread, args=(task,))
-            thread.start()
-        else:
-            self._run_client_callback(task)
-
-    def _apt_post_task_update_thread(self, task):
-        _apt.sync_cache_installed_states()
-
-        # This needs to be called after reloading the apt cache, otherwise our installed
-        # apps don't update correctly
         self._run_client_callback(task)
 
     def _run_client_callback(self, task):

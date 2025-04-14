@@ -15,13 +15,7 @@ SEARCH_IN_DESCRIPTION = "search-in-description"
 INSTALLED_APPS = "installed-apps"
 SEARCH_IN_CATEGORY = "search-in-category"
 HAMONIKR_SCREENSHOTS = "hamonikr-screenshots"
-PACKAGE_TYPE_PREFERENCE = "search-package-type-preference"
 ALLOW_UNVERIFIED_FLATPAKS = "allow-unverified-flatpaks"
-
-# Flatpak search option items
-PACKAGE_TYPE_PREFERENCE_ALL = "all"
-PACKAGE_TYPE_PREFERENCE_APT = "apt"
-PACKAGE_TYPE_PREFERENCE_FLATPAK = "flatpak"
 
 _ = gettext.gettext
 
@@ -50,15 +44,5 @@ class PrefsWidget(Gtk.Box):
         section.add_row(widget)
 
         section.add(warning_box)
-        
-        search_options = [
-            [PACKAGE_TYPE_PREFERENCE_ALL, _("List all types")],
-            (PACKAGE_TYPE_PREFERENCE_FLATPAK, _("Only list the Flatpak")),
-            (PACKAGE_TYPE_PREFERENCE_APT, _("Only list the system package")),
-        ]
-
-        section = page.add_section()
-        widget = GSettingsComboBox(_("When an app has multiple formats:"), SCHEMA_ID, PACKAGE_TYPE_PREFERENCE, search_options)
-        section.add_row(widget)
 
         self.show_all()

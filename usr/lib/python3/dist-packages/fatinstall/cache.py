@@ -6,7 +6,6 @@ import threading
 
 from gi.repository import GLib, GObject
 
-from . import _apt
 from . import _flatpak
 from ._flatpak import FlatpakRemoteInfo
 from .pkgInfo import FlatpakPkgInfo, AptPkgInfo
@@ -139,9 +138,6 @@ class PkgCache(object):
         # If there's no cache, always generate both package types.
         if self.have_flatpak and (self.cache_content in ("f", None) or self.status == self.STATUS_EMPTY):
             cache, flatpak_remote_infos = _flatpak.process_full_flatpak_installation(cache)
-
-        if self.cache_content in ("a", None) or self.status == self.STATUS_EMPTY:
-            cache, sections = _apt.process_full_apt_cache(cache)
 
         return cache, sections, flatpak_remote_infos
 
@@ -309,40 +305,8 @@ class PkgCache(object):
 
         return None
 
-    def _get_manually_installed_debs(self):
-        """
-        Generate list of manually installed Debian package.
-        Requires a package list provided by the installer.
-            Currently knows only Ubiquity's /var/log/installer/initial-status.gz
-        """
-        installer_log = "/var/log/installer/initial-status.gz"
-        if not os.path.isfile(installer_log):
-            return None
-        import gzip
-        try:
-            installer_log = gzip.open(installer_log, "r").read().decode('utf-8').splitlines()
-        except Exception as e:
-            # There are a number of different exceptions here, but there's only one response
-            warn("Could not get initial installed packages list (check /var/log/installer/initial-status.gz): %s" % str(e))
-            return None
-        initial_status = [x[9:] for x in installer_log if x.startswith("Package: ")]
-        if not initial_status:
-            return None
-        from . import _apt
-        pkgcache = [x[4:] for x in self.get_subset_of_type("a")]
-        current_status = ["apt:%s" % pkg for pkg in _apt.get_apt_cache() if
-            (pkg.installed and
-            not pkg.is_auto_installed and
-            pkg.shortname not in initial_status and
-            pkg.shortname in pkgcache)]
-        return current_status
-
     def get_manually_installed_packages(self):
         """ Get list of all manually installed packages (apt and flatpak) """
-        installed_packages = None
-        installed_packages_apt = self._get_manually_installed_debs()
-        if installed_packages_apt:
-            installed_packages = installed_packages_apt
-            installed_packages += [x for x in self.get_subset_of_type("f")]
+        installed_packages = [x for x in self.get_subset_of_type("f")]
         return installed_packages
 
