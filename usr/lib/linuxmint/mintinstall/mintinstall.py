@@ -423,26 +423,21 @@ class PackageTile(Gtk.FlowBoxChild):
         self.package_summary.set_label(summary)
 
         if self.show_package_type:
-            if self.pkginfo.pkg_hash.startswith("f"):
+            remote_info = None
 
-                remote_info = None
+            try:
+                remote_info = self.installer.get_remote_info_for_name(self.pkginfo.remote)
+                if remote_info:
+                    self.package_type_name.set_label(remote_info.title)
+            except:
+                pass
 
-                try:
-                    remote_info = self.installer.get_remote_info_for_name(self.pkginfo.remote)
-                    if remote_info:
-                        self.package_type_name.set_label(remote_info.title)
-                except:
-                    pass
+            if remote_info is None:
+                self.package_type_name.set_label(self.pkginfo.remote.capitalize())
 
-                if remote_info is None:
-                    self.package_type_name.set_label(self.pkginfo.remote.capitalize())
-
-                self.package_type_emblem.set_from_icon_name("mintinstall-package-flatpak-symbolic", Gtk.IconSize.MENU)
-                self.package_type_box.show()
-                self.package_type_box.set_tooltip_text(_("This package is a Flatpak"))
-            else:
-                self.package_type_name.hide()
-                self.package_type_emblem.hide()
+            self.package_type_emblem.set_from_icon_name("mintinstall-package-flatpak-symbolic", Gtk.IconSize.MENU)
+            self.package_type_box.show()
+            self.package_type_box.set_tooltip_text(_("This package is a Flatpak"))
 
         if self.pkginfo.verified:
             self.builder.get_object("review_info_box").show()
@@ -671,9 +666,7 @@ class Application(Gtk.Application):
         num = len(args)
 
         if num > 1 and args[1] == "list":
-            sys.exit(self.export_listing(flatpak_only=False))
-        elif num > 1 and args[1] == "list-flatpak":
-            sys.exit(self.export_listing(flatpak_only=True))
+            sys.exit(self.export_listing())
         elif num == 3 and args[1] == "install":
             for try_method in (Gio.File.new_for_path, Gio.File.new_for_uri):
                 file = try_method(args[2])
@@ -1348,9 +1341,6 @@ class Application(Gtk.Application):
         self.load_top_rated()
 
     def should_show_pkginfo(self, pkginfo):
-        if pkginfo.pkg_hash.startswith("apt"):
-            return True
-
         if not self.settings.get_boolean(prefs.ALLOW_UNVERIFIED_FLATPAKS):
             return pkginfo.verified
 
@@ -1416,14 +1406,11 @@ class Application(Gtk.Application):
             # the remote still exists, and will get errors if we try to display the app.  We will
             # just remove it from the cache at this point.
             can_show = False
-            if pkginfo.pkg_hash.startswith("f"):
-                remotes = self.installer.list_flatpak_remotes()
-                for remote in remotes:
-                    if remote.name == pkginfo.remote:
-                        can_show = True
-                        break
-            else:
-                can_show = True
+            remotes = self.installer.list_flatpak_remotes()
+            for remote in remotes:
+                if remote.name == pkginfo.remote:
+                    can_show = True
+                    break
 
             if can_show:
                 if self.recursion_buster:
@@ -1454,8 +1441,8 @@ class Application(Gtk.Application):
         return_list = []
 
         for item in packages:
-            if item.startswith(("apt:", "fp:")):
-                # pkg_hashes start with apt: or fp:, if items have this, they're up-to-date.
+            if item.startswith(("fp:")):
+                # pkg_hashes start with fp:, if items have this, they're up-to-date.
                 return_list.append(item)
                 continue
 
@@ -1742,13 +1729,7 @@ class Application(Gtk.Application):
         dlg.connect("response", close)
         dlg.show()
 
-    def export_listing(self, flatpak_only=False):
-        if not flatpak_only:
-            for filename in os.listdir("/var/lib/apt/lists/"):
-                if "i18n" in filename and not filename.endswith("-en"):
-                    print("Your APT cache is localized. Please remove all translations first.")
-                    print("sudo rm -rf /var/lib/apt/lists/*Translation%s" % filename[-3:])
-                    return 1
+    def export_listing(self):
         if (os.getenv('LANGUAGE') != "C"):
             print("Please prefix this command with LANGUAGE=C, to prevent content from being translated in the host's locale.")
             return 1
@@ -1770,10 +1751,7 @@ class Application(Gtk.Application):
         self.process_matching_packages()
         self.process_unmatched_packages()
 
-        if flatpak_only:
-            pkginfos = self.installer.cache.get_subset_of_type("f")
-        else:
-            pkginfos = self.installer.cache
+        pkginfos = self.installer.cache
 
         for pkg_hash in pkginfos.keys():
             pkginfo = self.installer.cache[pkg_hash]
@@ -2269,7 +2247,6 @@ class Application(Gtk.Application):
                 self.search_idle_timer = 0
                 return False
 
-            flatpak = pkginfo.pkg_hash.startswith("f")
             is_match = False
 
             while True:
@@ -2284,7 +2261,7 @@ class Application(Gtk.Application):
                 # may not actually contain the app's name. In this case their display
                 # names are better. The 'name' is still checked first above, because
                 # it's static - get_display_name() may involve a lookup with appstream.
-                if flatpak and all(piece in pkginfo.get_display_name().upper() for piece in termsSplit):
+                if all(piece in pkginfo.get_display_name().upper() for piece in termsSplit):
                     is_match = True
                     pkginfo.search_tier = 0
                     break
@@ -2375,8 +2352,7 @@ class Application(Gtk.Application):
 
             # A flatpak's 'name' may not even have the app's name in it.
             # It's better to compare by their display names
-            if pkg.pkg_hash.startswith("f"):
-                sort_pkg.name = pkg.get_display_name()
+            sort_pkg.name = pkg.get_display_name()
 
             if self.review_cache and pkg.name in self.review_cache:
                 sort_pkg.score_desc = -self.review_cache[pkg.name].score
@@ -2568,24 +2544,19 @@ class Application(Gtk.Application):
         self.unsafe_box.hide()
         self.builder.get_object("application_dev_name").set_label("")
 
-        if is_flatpak:
-            self.flatpak_details_vgroup.show()
-            # We don't know flatpak versions until the task reports back, apt we know immediately.
-            self.builder.get_object("application_version").set_label("")
+        self.flatpak_details_vgroup.show()
+        # We don't know flatpak versions until the task reports back.
+        self.builder.get_object("application_version").set_label("")
 
-            dev_name = self.installer.get_developer(pkginfo)
-            if dev_name != "":
-                self.builder.get_object("application_dev_name").set_label(_("by %s" % dev_name))
-            else:
-                self.builder.get_object("application_dev_name").set_label(_("Unknown maintainer"))
-
-            if not pkginfo.verified:
-                self.unsafe_box.show()
-                self.builder.get_object("application_dev_name").set_label("")
-
+        dev_name = self.installer.get_developer(pkginfo)
+        if dev_name != "":
+            self.builder.get_object("application_dev_name").set_label(_("by %s" % dev_name))
         else:
-            self.flatpak_details_vgroup.hide()
-            self.builder.get_object("application_version").set_label(self.installer.get_version(pkginfo))
+            self.builder.get_object("application_dev_name").set_label(_("Unknown maintainer"))
+
+        if not pkginfo.verified:
+            self.unsafe_box.show()
+            self.builder.get_object("application_dev_name").set_label("")
 
         self.package_type_combo.connect("changed", self.package_type_combo_changed)
 
@@ -2789,10 +2760,7 @@ class Application(Gtk.Application):
                 self.progress_label.set_text(_("Removing"))
             else:
                 action_button_label = _("Install")
-                if pkginfo.pkg_hash.startswith("f"):
-                    action_button_icon = "mintinstall-package-flatpak-symbolic"
-                else:
-                    action_button_icon = "linuxmint-logo-badge-symbolic"
+                action_button_icon = "mintinstall-package-flatpak-symbolic"
 
                 style_context.remove_class("destructive-action")
                 style_context.add_class("suggested-action")
@@ -2800,27 +2768,14 @@ class Application(Gtk.Application):
                 self.action_button.set_sensitive(True)
                 self.progress_label.set_text(_("Installing"))
         else:
-            if task.info_ready_status == task.STATUS_FORBIDDEN:
-                if task.type == "remove":
-                    action_button_label = _("Cannot remove")
-                    action_button_description = _("Removing this package could cause irreparable damage to your system.")
-                else:
-                    action_button_label = _("Cannot install")
-                    action_button_description = _("Installing this package could cause irreparable damage to your system.")
-
-                    style_context.remove_class("suggested-action")
-                    style_context.add_class("destructive-action")
-
-                self.action_button.set_sensitive(False)
-                self.progress_label.set_text("")
-            elif task.info_ready_status == task.STATUS_BROKEN:
+            if task.info_ready_status == task.STATUS_BROKEN:
                 action_button_label = _("Not available")
                 style_context.remove_class("destructive-action")
                 style_context.remove_class("suggested-action")
                 if task.type == "install":
-                    action_button_description = _("Please use apt-get to install this package.")
+                    action_button_description = _("Please use flatpak to install this package.")
                 else:
-                    action_button_description = _("Use apt-get to remove this package.")
+                    action_button_description = _("Use flatpak to remove this package.")
 
                 self.action_button.set_sensitive(False)
             elif task.info_ready_status == task.STATUS_UNKNOWN:
@@ -2880,53 +2835,28 @@ class Application(Gtk.Application):
         exec_string = None
 
         if self.installer.pkginfo_is_installed(pkginfo):
-            if pkginfo.pkg_hash.startswith("a"):
-                for desktop_file in [
-                    # foo.desktop
-                    "/usr/share/applications/%s.desktop" % bin_name,
-                    # foo in foo-bar.desktop or foo_bar.desktop
-                    "/usr/share/applications/%s.desktop" % bin_name.split("-")[0],
-                    "/usr/share/applications/%s.desktop" % bin_name.split("_")[0],
-                    # foo-bar package with foo_bar.desktop
-                    "/usr/share/applications/%s.desktop" % bin_name.replace("-", "_"),
-                    # foo in org.bar.Foo.desktop
-                    "/usr/share/applications/%s.desktop" % bin_name.split(".")[-1],
-                    "/usr/share/app-install/desktop/%s:%s.desktop" % (bin_name, bin_name)
-                    ]:
-
-                    if os.path.exists(desktop_file):
-                        try:
-                            info = Gio.DesktopAppInfo.new_from_filename(desktop_file)
-                            exec_string = info.get_commandline()
-                            if exec_string is not None:
-                                break
-                        except Exception as e:
-                            print(e)
-                if exec_string is None and os.path.exists("/usr/bin/%s" % bin_name):
-                    exec_string = "/usr/bin/%s" % bin_name
-            else:
-                launchables = self.installer.get_flatpak_launchables(pkginfo)
-                if launchables:
-                    for desktop_id in launchables:
-                        desktop_file = os.path.join(self.installer.get_flatpak_root_path(), "exports/share/applications", desktop_id)
-                        try:
-                            info = Gio.DesktopAppInfo.new_from_filename(desktop_file)
-                        except TypeError:
-                            info = Gio.DesktopAppInfo.new_from_filename(desktop_file + ".desktop")
-                        exec_string = info.get_commandline()
-                        break
-                else:
-                    desktop_file = os.path.join(self.installer.get_flatpak_root_path(), "exports/share/applications", pkginfo.name)
-                    info = None
+            launchables = self.installer.get_flatpak_launchables(pkginfo)
+            if launchables:
+                for desktop_id in launchables:
+                    desktop_file = os.path.join(self.installer.get_flatpak_root_path(), "exports/share/applications", desktop_id)
                     try:
                         info = Gio.DesktopAppInfo.new_from_filename(desktop_file)
                     except TypeError:
-                        try:
-                            info = Gio.DesktopAppInfo.new_from_filename(desktop_file + ".desktop")
-                        except:
-                            pass
-                    if info is not None:
-                        exec_string = info.get_commandline()
+                        info = Gio.DesktopAppInfo.new_from_filename(desktop_file + ".desktop")
+                    exec_string = info.get_commandline()
+                    break
+            else:
+                desktop_file = os.path.join(self.installer.get_flatpak_root_path(), "exports/share/applications", pkginfo.name)
+                info = None
+                try:
+                    info = Gio.DesktopAppInfo.new_from_filename(desktop_file)
+                except TypeError:
+                    try:
+                        info = Gio.DesktopAppInfo.new_from_filename(desktop_file + ".desktop")
+                    except:
+                        pass
+                if info is not None:
+                    exec_string = info.get_commandline()
 
         if exec_string is not None:
             task.exec_string = exec_string
