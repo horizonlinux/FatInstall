@@ -3,7 +3,7 @@ Version:    8.3.7
 Release:    1
 Summary:    Software Manager for flatpaks - A fork of mintinstall
 
-Source0:    https://github.com/horizonlinux/FatInstall/archive/refs/tags/latest.tar.gz
+Source0:    https://github.com/horizonlinux/FatInstall/releases/download/latest/fatinstall-8.3.7.tar.gz
 License:    GPL-3.0-only
 BuildArch:  noarch
 
