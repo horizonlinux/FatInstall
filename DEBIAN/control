@@ -1,7 +1,7 @@
-Package: mintinstall
+Package: fatinstall
 Version: 8.3.7
 Architecture: all
-Maintainer: Linux Mint <root@linuxmint.com>
+Maintainer: Microwave <github.com/Micro856>
 Installed-Size: 1320
 Pre-Depends: ca-certificates (>= 20210101)
 Depends: python3 (>= 3.4), python3-bs4, python3-gi-cairo, python3-lxml, python3-setproctitle, python3-xapp, gir1.2-gdkpixbuf-2.0, gir1.2-glib-2.0, gir1.2-gtk-3.0, gir1.2-xapp-1.0, libgtk3-perl, mint-common (>= 2.2.4), app-install-data
