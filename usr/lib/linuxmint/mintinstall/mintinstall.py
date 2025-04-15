@@ -1040,7 +1040,7 @@ class Application(Gtk.Application):
 
     def print_startup_time(self):
         end_time = time.time()
-        print('Mintinstall startup took %0.3f ms' % ((end_time - self.start_time) * 1000.0,))
+        print('Fatinstall startup took %0.3f ms' % ((end_time - self.start_time) * 1000.0,))
 
     @print_timing
     def load_banner(self):
@@ -1706,8 +1706,8 @@ class Application(Gtk.Application):
         dlg = Gtk.AboutDialog()
         dlg.set_transient_for(self.main_window)
         dlg.set_title(_("About"))
-        dlg.set_program_name("mintinstall")
-        dlg.set_comments(_("Software Manager"))
+        dlg.set_program_name("FatInstall\n\nSoftware Manager powered by Flatpak")
+        dlg.set_comments(_("FatInstall is a fork of Mintinstall which only installs Flatpaks\n\nMintinstall Copyright Linux Mint Team"))
         try:
             h = open('/usr/share/common-licenses/GPL', 'r')
             s = h.readlines()
@@ -1720,8 +1720,8 @@ class Application(Gtk.Application):
             print(e)
 
         dlg.set_version("8.3.7")
-        dlg.set_icon_name("mintinstall")
-        dlg.set_logo_icon_name("mintinstall")
+        dlg.set_icon_name("fatinstall")
+        dlg.set_logo_icon_name("fatinstall")
 
         def close(w, res):
             if res == Gtk.ResponseType.CANCEL or res == Gtk.ResponseType.DELETE_EVENT:

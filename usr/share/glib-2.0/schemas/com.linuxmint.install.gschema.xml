@@ -33,7 +33,6 @@
     <key type="s" name="search-package-type-preference">
       <choices>
         <choice value="all"/>
-        <choice value="apt"/>
         <choice value="flatpak"/>
       </choices>
       <default>"all"</default>
@@ -41,7 +40,7 @@
       <description></description>
     </key>
     <key type="b" name="allow-unverified-flatpaks">
-      <default>false</default>
+      <default>true</default>
       <summary>If true, unverified Flatpaks will be shown.</summary>
       <description></description>
     </key>

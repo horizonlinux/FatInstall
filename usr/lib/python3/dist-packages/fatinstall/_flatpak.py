@@ -21,7 +21,7 @@ except:
 
 from .pkgInfo import FlatpakPkgInfo
 from . import dialogs
-#from .dialogs import ChangesConfirmDialog, FlatpakProgressWindow
+from .dialogs import ChangesConfirmDialog, FlatpakProgressWindow
 from .misc import debug, warn, print_timing
 from . import appstream_pool
 
