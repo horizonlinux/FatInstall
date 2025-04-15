@@ -19,7 +19,6 @@ format are flatpaks. FatInstall is a fork of Linux Mint mintinstall.
 %setup -q
 
 %build
-make
 
 %files
 /usr/share/*
