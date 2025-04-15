@@ -4,7 +4,7 @@ Release:    1
 Summary:    Software Manager for flatpaks - A fork of mintinstall
 
 Source0:    https://github.com/horizonlinux/FatInstall/archive/refs/tags/latest.tar.gz
-Licence:    GPL-3.0-only
+License:    GPL-3.0-only
 BuildArch:  noarch
 
 Requires:   html2text
