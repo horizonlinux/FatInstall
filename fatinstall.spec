@@ -15,6 +15,12 @@ FatInstall is a Software Manager designed for any Linux Distribution.
 It comes with fast installing speeds, and clean UI. Its only packaging
 format are flatpaks. FatInstall is a fork of Linux Mint mintinstall.
 
+%prep
+%setup -q
+
+%build
+make
+
 %files
 /usr/share/*
 /usr/lib/*
