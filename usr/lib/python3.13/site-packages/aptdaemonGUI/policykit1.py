@@ -36,7 +36,7 @@ __all__ = ("check_authorization_by_name", "check_authorization_by_pid",
 
 import dbus
 
-from defer import Deferred, inline_callbacks, return_value
+from FATINSTALLdefer import Deferred, inline_callbacks, return_value
 from .errors import NotAuthorizedError, AuthorizationFailed
 
 PK_ACTION_INSTALL_OR_REMOVE_PACKAGES = (
