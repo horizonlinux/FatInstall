@@ -45,7 +45,7 @@ import pango
 import vte
 
 from .enums import *
-from defer import inline_callbacks
+from FATINSTALLdefer import inline_callbacks
 from FATINSTALLdefer.utils import deferable
 
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
