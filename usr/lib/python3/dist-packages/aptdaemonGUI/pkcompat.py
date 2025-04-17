@@ -31,7 +31,7 @@ import time
 import uuid
 
 import apt_pkg
-from defer import inline_callbacks, return_value
+from FATINSTALLdefer import inline_callbacks, return_value
 from FATINSTALLdefer.utils import dbus_deferred_method
 import dbus
 from gi.repository import GObject, GLib
