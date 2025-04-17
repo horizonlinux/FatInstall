@@ -60,7 +60,7 @@ import apt.auth
 from .config import ConfigWriter
 from . import errors
 from . import enums
-from defer import inline_callbacks, return_value, Deferred
+from FATINSTALLdefer import inline_callbacks, return_value, Deferred
 from FATINSTALLdefer.utils import dbus_deferred_method
 from . import policykit1
 from .worker import (
