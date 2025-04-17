@@ -1,9 +1,9 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: mintinstall
-Upstream-Contact: Clement Lefebvre <root@linuxmint.com>
+Upstream-Name: fatinstall
+Upstream-Contact: Clement Lefebvre <root@horizonlinux.com>
 
 Files: *
-Copyright: 2007-2014 Clement Lefebvre <root@linuxmint.com>
+Copyright: 2007-2014 Clement Lefebvre <root@horizonlinux.com>
 License: GPL-2+
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -21,15 +21,15 @@ License: GPL-2+
  On Debian GNU/Linux systems, the complete text of the GNU General Public
  License version 2 can be found in '/usr/share/common-licenses/GPL-2'.
 
-Files: usr/lib/linuxmint/mintInstall/widgets/*
+Files: usr/lib/horizonlinux/mintInstall/widgets/*
 Copyright: 2009 Canonical
 License: GPL-3+
 
-Files: usr/lib/linuxmint/mintInstall/widgets/{pathbar2.py,rgb.py}
+Files: usr/lib/horizonlinux/mintInstall/widgets/{pathbar2.py,rgb.py}
 Copyright: 2009 Matthew McGowan
 License: GPL-3+
 
-Files: usr/lib/linuxmint/mintInstall/widgets/urltextview.py
+Files: usr/lib/horizonlinux/mintInstall/widgets/urltextview.py
 Copyright: 2006 Sebastian Heinlein
 License: GPL-3+
 

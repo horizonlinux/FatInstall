@@ -589,7 +589,7 @@ class Application(Gtk.Application):
     PAGE_PREFS = "prefs"
 
     def __init__(self):
-        super(Application, self).__init__(application_id='com.linuxmint.mintinstall',
+        super(Application, self).__init__(application_id='com.horizonlinux.fatinstall',
                                           flags=Gio.ApplicationFlags.HANDLES_OPEN | Gio.ApplicationFlags.HANDLES_COMMAND_LINE)
 
         self.gui_ready = False
@@ -597,10 +597,10 @@ class Application(Gtk.Application):
 
         self.low_res = self.get_low_res_screen()
 
-        self.settings = Gio.Settings(schema_id="com.linuxmint.install")
+        self.settings = Gio.Settings(schema_id="com.horizonlinux.fatinstall")
         self.arch = platform.machine()
 
-        print("MintInstall: Detected system architecture: '%s'" % self.arch)
+        print("FatInstall: Detected system architecture: '%s'" % self.arch)
 
         self.locale = os.getenv('LANGUAGE')
         if self.locale is None:
@@ -782,7 +782,7 @@ class Application(Gtk.Application):
 
     def create_window(self, starting_page):
         if self.main_window is not None:
-            print("MintInstall: create_window called, but we already had one!")
+            print("FatInstall: create_window called, but we already had one!")
             return
 
         # Build the GUI
@@ -794,7 +794,7 @@ class Application(Gtk.Application):
         self.main_window.set_title(_("Software Manager"))
         GLib.set_application_name(_("Software Manager"))
 
-        self.main_window.set_icon_name("mintinstall")
+        self.main_window.set_icon_name("fatinstall")
         self.main_window.connect("delete_event", self.close_application)
         self.main_window.connect("key-press-event", self.on_keypress)
         self.main_window.connect("button-press-event", self.on_buttonpress)
@@ -1091,15 +1091,15 @@ class Application(Gtk.Application):
                 name = name.replace("flatpak:", "")
                 pkginfo = self.installer.find_pkginfo(name, installer.PKG_TYPE_FLATPAK)
 
-                if pkginfo is None or not pkginfo.verified:
-                    continue
+                #if pkginfo is None or not pkginfo.verified:
+                    #continue
 
                 is_flatpak = True
             else:
                 continue
 
-            if pkginfo is None:
-                continue
+            #if pkginfo is None:
+                #continue
 
             selected_apps.add(name)
             num_selected += 1
@@ -1271,21 +1271,21 @@ class Application(Gtk.Application):
             if name.startswith("flatpak:"):
                 name = name.replace("flatpak:", "")
                 pkginfo = self.installer.find_pkginfo(name, installer.PKG_TYPE_FLATPAK)
-                if pkginfo is None or not pkginfo.verified:
-                    continue
+                #if pkginfo is None or not pkginfo.verified:
+                    #continue
             else:
                 continue
             if pkginfo is None:
                 continue
             if pkginfo.name == self.banner_app_name:
                 continue
-            if self.installer.pkginfo_is_installed(pkginfo):
-                continue
+            #if self.installer.pkginfo_is_installed(pkginfo):
+                #continue
             if pkginfo.refid == "" or pkginfo.refid.startswith("app"):
                 apps.append(pkginfo)
 
-        random.shuffle(apps)
-        apps = apps[0:9]
+        #random.shuffle(apps)
+        #apps = apps[0:9]
 
         size_group = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
         self.featured_app_names = []
@@ -1706,7 +1706,7 @@ class Application(Gtk.Application):
         dlg = Gtk.AboutDialog()
         dlg.set_transient_for(self.main_window)
         dlg.set_title(_("About"))
-        dlg.set_program_name("FatInstall\n\nSoftware Manager powered by Flatpak")
+        dlg.set_program_name("FatInstall")
         dlg.set_comments(_("FatInstall is a fork of Mintinstall which only installs Flatpaks\n\nMintinstall Copyright Linux Mint Team"))
         try:
             h = open('/usr/share/common-licenses/GPL', 'r')
@@ -1851,124 +1851,6 @@ class Application(Gtk.Application):
         self.active_tasks_category = Category(_("Currently working on the following packages"), None, None)
 
         self.flatpak_category = Category("Flatpak", None, self.categories, "mintinstall-package-flatpak-symbolic")
-
-        # INTERNET
-        category = Category(_("Internet"), None, self.categories, "mintinstall-web-symbolic")
-
-        subcat = Category(_("Web"), category, self.categories, "mintinstall-web-symbolic")
-        self.sections["web"] = subcat
-        self.sections["net"] = subcat
-        subcat.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/internet-web.list")
-
-        subcat = Category(_("Email"), category, self.categories, "mintinstall-email-symbolic")
-        self.sections["mail"] = subcat
-        subcat.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/internet-email.list")
-
-        subcat = Category(_("Chat"), category, self.categories, "mintinstall-chat-symbolic")
-        subcat.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/internet-chat.list")
-
-        subcat = Category(_("File sharing"), category, self.categories, "mintinstall-share-symbolic")
-        subcat.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/internet-filesharing.list")
-
-        self.root_categories[category.name] = category
-
-        # SOUND AND VIDEO
-        category = Category(_("Sound and video"), None, self.categories, "mintinstall-music-symbolic")
-        category.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/sound-video.list")
-        subcat = Category(_("Sound"), category, self.categories, "mintinstall-music-symbolic")
-        self.sections["sound"] = subcat
-        subcat = Category(_("Video"), category, self.categories, "mintinstall-video-symbolic")
-        self.sections["video"] = subcat
-        self.root_categories[category.name] = category
-
-        # GRAPHICS
-        category = Category(_("Graphics"), None, self.categories, "mintinstall-drawing-symbolic")
-        self.sections["graphics"] = category
-        category.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/graphics.list")
-
-        subcat = Category(_("3D"), category, self.categories, "mintinstall-3d-symbolic")
-        subcat.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/graphics-3d.list")
-        subcat = Category(_("Drawing"), category, self.categories, "mintinstall-drawing-symbolic")
-        subcat.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/graphics-drawing.list")
-        subcat = Category(_("Photography"), category, self.categories, "mintinstall-photo-symbolic")
-        subcat.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/graphics-photography.list")
-        subcat = Category(_("Publishing"), category, self.categories, "mintinstall-publishing-symbolic")
-        subcat.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/graphics-publishing.list")
-        subcat = Category(_("Scanning"), category, self.categories, "mintinstall-scanning-symbolic")
-        subcat.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/graphics-scanning.list")
-        subcat = Category(_("Viewers"), category, self.categories, "mintinstall-viewers-symbolic")
-        subcat.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/graphics-viewers.list")
-        self.root_categories[category.name] = category
-
-        # OFFICE
-        category = Category(_("Office"), None, self.categories, "mintinstall-office-symbolic")
-        self.sections["office"] = category
-        self.sections["editors"] = category
-        self.root_categories[category.name] = category
-
-        # GAMES
-        category = Category(_("Games"), None, self.categories, "mintinstall-games-symbolic")
-        self.sections["games"] = category
-        category.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/games.list")
-
-        subcat = Category(_("Board games"), category, self.categories, "mintinstall-board-symbolic")
-        subcat.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/games-board.list")
-        subcat = Category(_("First-person"), category, self.categories, "mintinstall-fps-symbolic")
-        subcat.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/games-fps.list")
-        subcat = Category(_("Real-time strategy"), category, self.categories, "mintinstall-rts-symbolic")
-        subcat.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/games-rts.list")
-        subcat = Category(_("Turn-based strategy"), category, self.categories, "mintinstall-tbs-symbolic")
-        subcat.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/games-tbs.list")
-        subcat = Category(_("Emulators"), category, self.categories, "mintinstall-emulator-symbolic")
-        subcat.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/games-emulators.list")
-        subcat = Category(_("Simulation and racing"), category, self.categories, "mintinstall-sim-symbolic")
-        subcat.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/games-simulations.list")
-        self.root_categories[category.name] = category
-
-        # ACCESSORIES
-        category = Category(_("Accessories"), None, self.categories, "mintinstall-accessories-symbolic")
-        self.sections["accessories"] = category
-        self.sections["utils"] = category
-        self.root_categories[category.name] = category
-
-        # SYSTEM TOOLS
-        category = Category(_("System tools"), None, self.categories, "mintinstall-system-symbolic")
-        self.sections["system"] = category
-        self.sections["admin"] = category
-        category.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/system-tools.list")
-        self.root_categories[category.name] = category
-
-        # FONTS
-        category = Category(_("Fonts"), None, self.categories, "mintinstall-fonts-symbolic")
-        self.sections["fonts"] = category
-        category.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/fonts.list")
-        self.root_categories[category.name] = category
-
-        # EDUCATION
-        category = Category(_("Science and Education"), None, self.categories, "mintinstall-science-symbolic")
-        subcat = Category(_("Science"), category, self.categories, "mintinstall-science-symbolic")
-        self.sections["science"] = subcat
-        subcat = Category(_("Maths"), category, self.categories, "mintinstall-maths-symbolic")
-        self.sections["math"] = subcat
-        subcat = Category(_("Education"), category, self.categories, "mintinstall-education-symbolic")
-        self.sections["education"] = subcat
-        subcat = Category(_("Electronics"), category, self.categories, "mintinstall-electronic-symbolic")
-        self.sections["electronics"] = subcat
-        category.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/education.list")
-        self.root_categories[category.name] = category
-
-        # PROGRAMMING
-        category = Category(_("Programming"), None, self.categories, "mintinstall-programming-symbolic")
-        self.sections["devel"] = category
-        subcat = Category(_("Java"), category, self.categories, "mintinstall-java-symbolic")
-        self.sections["java"] = subcat
-        subcat = Category(_("PHP"), category, self.categories, "mintinstall-php-symbolic")
-        self.sections["php"] = subcat
-        subcat = Category(_("Python"), category, self.categories, "mintinstall-python-symbolic")
-        self.sections["python"] = subcat
-        subcat = Category(_("Essentials"), category, self.categories, "xapp-favorites-app-symbolic")
-        subcat.matchingPackages = self.file_to_array("/usr/share/linuxmint/mintinstall/categories/development-essentials.list")
-        self.root_categories[category.name] = category
 
         # ALL
         self.flatpak_category = Category(_("All Applications"), None, self.categories, "mintinstall-all-symbolic")
