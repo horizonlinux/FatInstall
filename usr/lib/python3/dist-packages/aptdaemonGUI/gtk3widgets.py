@@ -43,7 +43,7 @@ gi.require_version('Vte', '2.91')
 from gi.repository import Gtk, Gdk, GObject, GLib, Pango, Vte
 
 from .enums import *
-from defer import inline_callbacks
+from FATINSTALLdefer import inline_callbacks
 from FATINSTALLdefer.utils import deferable
 
 _ = lambda msg: gettext.dgettext("aptdaemon", msg)
