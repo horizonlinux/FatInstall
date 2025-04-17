@@ -24,7 +24,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 # USA
 
-from defer import Deferred, inline_callbacks, return_value
+from FATINSTALLdefer import Deferred, inline_callbacks, return_value
 from gi.repository import GObject
 from gi.repository import Gio
 from gi.repository import GLib
