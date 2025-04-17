@@ -26,8 +26,8 @@ gi.require_version('XApp', '1.0')
 from gi.repository import Gtk, Gdk, GdkPixbuf, GObject, GLib, Gio, XApp, Pango
 import cairo
 
-from fatinstall import installer
-from fatinstall import dialogs
+from fatinstallPY import installer
+from fatinstallPY import dialogs
 import prefs
 import reviews
 import housekeeping
