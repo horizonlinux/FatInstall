@@ -8,7 +8,7 @@ from xapp.SettingsWidgets import SettingsPage, Text
 from xapp.GSettingsWidgets import GSettingsSwitch, GSettingsComboBox
 
 # GSettings
-SCHEMA_ID = "com.linuxmint.install"
+SCHEMA_ID = "com.horizonlinux.fatistall"
 
 SEARCH_IN_SUMMARY = "search-in-summary"
 SEARCH_IN_DESCRIPTION = "search-in-description"
